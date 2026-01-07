@@ -5,7 +5,6 @@ using System;
 [RequireComponent(typeof(Mover))]
 [RequireComponent(typeof(FollowTargetMover))]
 [RequireComponent(typeof(Collider))]
-[RequireComponent(typeof(Renderer))]
 [RequireComponent(typeof(Rigidbody))]
 [AddComponentMenu("Game/Enemies/Enemy")]
 public class Enemy : MonoBehaviour
@@ -13,12 +12,7 @@ public class Enemy : MonoBehaviour
     private Mover _mover;
     private FollowTargetMover _followTargetMover;
     private Collider _collider;
-    private Renderer _renderer;
     private Rigidbody _rigidbody;
-
-    private MaterialPropertyBlock _materialPropertyBlock;
-    private static readonly int ColorId = Shader.PropertyToID("_Color");
-    private Color _defaultColor;
 
     public event Action<Enemy> ReachedTarget;
 
@@ -27,22 +21,10 @@ public class Enemy : MonoBehaviour
         _mover = GetComponent<Mover>();
         _followTargetMover = GetComponent<FollowTargetMover>();
         _collider = GetComponent<Collider>();
-        _renderer = GetComponent<Renderer>();
         _rigidbody = GetComponent<Rigidbody>();
 
         _rigidbody.isKinematic = true;
         _collider.isTrigger = true;
-
-        _materialPropertyBlock = new MaterialPropertyBlock();
-
-        if(_renderer.sharedMaterial != null)
-        {
-            _defaultColor = _renderer.sharedMaterial.color;
-        }
-        else
-        {
-            _defaultColor= Color.white;
-        }
     }
 
     public void Reset()
@@ -50,8 +32,6 @@ public class Enemy : MonoBehaviour
         _followTargetMover.ClearTarget();
         _mover.Stop();
         transform.rotation = Quaternion.identity;
-
-        SetColor(_defaultColor);  
     }
 
     public void Initialize(Vector3 position, Quaternion rotation)
@@ -66,13 +46,6 @@ public class Enemy : MonoBehaviour
             throw new ArgumentException(nameof(target));
 
         _followTargetMover.SetTarget(target);
-    }
-
-    public void SetColor(Color color)
-    {
-        _renderer.GetPropertyBlock(_materialPropertyBlock);
-        _materialPropertyBlock.SetColor(ColorId, color);
-        _renderer.SetPropertyBlock(_materialPropertyBlock);
     }
 
     private void OnTriggerEnter(Collider other)
