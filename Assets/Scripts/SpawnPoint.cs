@@ -1,11 +1,13 @@
-using System.Collections.Generic;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 [AddComponentMenu("Game/Spawners/Spawn Point")]
 public class SpawnPoint : MonoBehaviour
 {
-    [SerializeField] private List<Target> _targets = new List<Target>();
+    [SerializeField] private Enemy _enemyPrefab;
+    [SerializeField] private Target _target;
+
+    public Enemy EnemyPrefab => _enemyPrefab;
+    public Target Target => _target;
 
     public Vector3 GetPoint()
     {
@@ -15,21 +17,6 @@ public class SpawnPoint : MonoBehaviour
     public Quaternion GetRotation()
     {
         return transform.rotation;
-    }
-
-    public Target GetTarget()
-    {
-        if(_targets == null || _targets.Count == 0)
-            return null;
-
-        int minCount = 0;
-
-        if(_targets.Count == 1)
-            return _targets[minCount];
-
-        int index = Random.Range(minCount, _targets.Count);
-
-        return _targets[index];
     }
 
     private void OnDrawGizmos()

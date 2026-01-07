@@ -144,11 +144,6 @@ public class TargetWaypointMover : MonoBehaviour
         return _currentIndex == _waypoints.Count - 1;
     }
 
-    //private bool IsFirstWaypoint()
-    //{
-    //    return _currentIndex == 0;
-    //}
-
     private void MoveTowards(Vector3 toPoint)
     {
         if (toPoint == Vector3.zero)

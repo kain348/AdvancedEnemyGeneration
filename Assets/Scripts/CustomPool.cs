@@ -23,26 +23,33 @@ public class CustomPool<T> where T : MonoBehaviour
 
         for (int i = 0; i < prewarmObjects; i++)
         {
-            CreateNewObject();
+            var @object = CreateNewObject();
+            @object.gameObject.SetActive(false);
+            _availableObjects.Enqueue(@object);
         }
     }
 
     public T Get()
     {
-        if (_availableObjects.Count > 0)
+        while (_availableObjects.Count > 0)
         {
             var @object = _availableObjects.Dequeue();
-            InitializeObject(@object);
 
+            if (@object == null || @object.gameObject == null)
+                continue;
+
+            InitializeObject(@object);
+           
             return @object;
         }
 
-        if (_allObjects.Count < _maxPoolSize)
-        {
-            return CreateNewObject();
-        }
+        if(_allObjects.Count>= _maxPoolSize)
+            return null;
 
-        return null;
+        var newObject = CreateNewObject();
+        InitializeObject(newObject);
+
+        return newObject;
     }
 
     public void Release(T @object)
@@ -56,15 +63,16 @@ public class CustomPool<T> where T : MonoBehaviour
 
     private void InitializeObject(T @object)
     {
+        if (@object == null || @object.gameObject == null)
+            return;
+
         @object.gameObject.SetActive(true);
     }
 
     private T CreateNewObject()
     {
         var @object = Object.Instantiate(_prefab);
-        @object.gameObject.SetActive(false);
         _allObjects.Add(@object);
-        _availableObjects.Enqueue(@object);
 
         return @object;
     }
