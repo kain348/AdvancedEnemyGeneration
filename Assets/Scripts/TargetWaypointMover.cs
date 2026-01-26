@@ -176,10 +176,7 @@ public class TargetWaypointMover : MonoBehaviour
 
     private void AdvanceLoop()
     {
-        _currentIndex++;
-
-        if (_currentIndex >= _waypoints.Count)
-            _currentIndex = 0;
+        _currentIndex = ++_currentIndex % _waypoints.Count;
     }
 
     private void AdvancePingPong()

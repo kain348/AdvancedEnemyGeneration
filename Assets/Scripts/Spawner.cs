@@ -8,24 +8,30 @@ using Random = UnityEngine.Random;
 public class Spawner : MonoBehaviour
 {
     [Header("Settings Map: Points")]
+    [Tooltip("List of spawn points at level.")]
     [SerializeField] private List<SpawnPoint> _spawnPoints = new List<SpawnPoint>();
 
     [Header("Spawn Settings")]
     [SerializeField] private int _maxPoolSize = 50;
-    [SerializeField] private int _prewarmPerType = 10;
+    [SerializeField] private int _prewarmPerPoint = 10;
     [SerializeField] private float _spawnDelay = 2f;
 
     private bool _canSpawn = true;
     private Coroutine _spawnCoroutine;
     private WaitForSeconds _spawnWait;
 
-    private readonly Dictionary<Enemy, CustomPool<Enemy>> _poolsByPrefab = new Dictionary<Enemy, CustomPool<Enemy>>();
-    private readonly Dictionary<Enemy, CustomPool<Enemy>> _poolByInstance = new Dictionary<Enemy, CustomPool<Enemy>>();
-    private HashSet<Enemy> _activeEnemies = new HashSet<Enemy>();
-
     private void Start()
     {
         _spawnWait = new WaitForSeconds(_spawnDelay);
+
+        foreach (SpawnPoint spawnPoint in _spawnPoints)
+        {
+            if (spawnPoint == null)
+                continue;
+
+            spawnPoint.InitializePool(_prewarmPerPoint, _maxPoolSize);
+        }
+
         _spawnCoroutine = StartCoroutine(SpawnRoutine());
     }
 
@@ -39,23 +45,13 @@ public class Spawner : MonoBehaviour
             _spawnCoroutine = null;
         }
 
-        foreach (var enemy in _activeEnemies)
+        foreach (SpawnPoint spawnPoint in _spawnPoints)
         {
-            if (enemy != null)
-            {
-                enemy.ReachedTarget -= OnEnemyReachedTarget;
+            if (spawnPoint == null)
+                continue;
 
-                if (_poolByInstance.TryGetValue(enemy, out var pool))
-                {
-                    enemy.Reset();
-                    pool.Release(enemy);
-                }
-            }
+            spawnPoint.DeinitializePool();
         }
-
-        _activeEnemies.Clear();
-        _poolByInstance.Clear();
-        _poolsByPrefab.Clear();
     }
 
     private IEnumerator SpawnRoutine()
@@ -64,93 +60,19 @@ public class Spawner : MonoBehaviour
 
         while (_canSpawn)
         {
-            Spawned();
+            SpawnAtRandomPoint();
 
             yield return _spawnWait;
         }
     }
 
-    private void Spawned()
+    private void SpawnAtRandomPoint()
     {
         SpawnPoint spawnPoint = GetRandomSpawnPoint();
         if (spawnPoint == null)
             return;
 
-        Enemy prefab = spawnPoint.EnemyPrefab;
-        if (prefab == null)
-        {
-            Debug.LogWarning($"SpawnPoint {spawnPoint.name} has no EnemyPrefab assigned.", spawnPoint);
-            return;
-        }
-
-        CustomPool<Enemy> pool = GetOrCreatePool(prefab);
-        if (pool == null)
-            return;
-
-        Enemy enemy = pool.Get();
-        if (enemy == null)
-            return;
-
-        _poolByInstance[enemy] = pool;
-
-        if (ConfigureEnemy(enemy, spawnPoint) == false)
-        {
-            _poolByInstance.Remove(enemy);
-            pool.Release(enemy);
-
-            return;
-        }
-
-        enemy.ReachedTarget += OnEnemyReachedTarget;
-        _activeEnemies.Add(enemy);
-    }
-
-    private CustomPool<Enemy> GetOrCreatePool(Enemy prefab)
-    {
-        if (prefab == null)
-            return null;
-
-        if (_poolsByPrefab.TryGetValue(prefab, out var existingPool))
-            return existingPool;
-
-        var newPool = new CustomPool<Enemy>(prefab, _prewarmPerType, _maxPoolSize);
-        _poolsByPrefab.Add(prefab, newPool);
-
-        return newPool;
-    }
-
-    private bool ConfigureEnemy(Enemy enemy, SpawnPoint spawnPoint)
-    {
-        Target target = spawnPoint.Target;
-        if (target == null)
-        {
-            Debug.LogWarning($"SpawnPoint {spawnPoint.name} has no Target assigned.", spawnPoint);
-            return false;
-        }
-
-        enemy.Initialize(spawnPoint.GetPoint(), spawnPoint.GetRotation());
-        enemy.Move(target);
-
-        return true;
-    }
-
-    private void OnEnemyReachedTarget(Enemy enemy)
-    {
-        enemy.ReachedTarget -= OnEnemyReachedTarget;
-        _activeEnemies.Remove(enemy);
-
-        enemy.Reset();
-
-        if (_poolByInstance.TryGetValue(enemy, out var pool))
-        {
-            _poolByInstance.Remove(enemy);
-            pool.Release(enemy);
-        }
-        else
-        {
-            Debug.LogWarning($"No pool found for enemy instance {enemy.name}. Deactivating it.");
-            enemy.gameObject.SetActive(false);
-        }
+        spawnPoint.SpawnEnemy();
     }
 
     private SpawnPoint GetRandomSpawnPoint()

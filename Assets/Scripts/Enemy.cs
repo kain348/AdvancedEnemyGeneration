@@ -27,6 +27,20 @@ public class Enemy : MonoBehaviour
         _collider.isTrigger = true;
     }
 
+    private void OnTriggerEnter(Collider other)
+    {
+        if (_followTargetMover.Target == null)
+            return;
+
+        if (other.TryGetComponent(out Target target))
+        {
+            if (target == _followTargetMover.Target)
+            {
+                ReachedTarget?.Invoke(this);
+            }
+        }
+    }
+
     public void Reset()
     {
         _followTargetMover.ClearTarget();
@@ -46,21 +60,5 @@ public class Enemy : MonoBehaviour
             throw new ArgumentException(nameof(target));
 
         _followTargetMover.SetTarget(target);
-    }
-
-    private void OnTriggerEnter(Collider other)
-    {
-        if (_followTargetMover.Target == null)
-            return;
-
-        if (other.TryGetComponent<Target>(out var target))
-        {
-            if (target == _followTargetMover.Target)
-            {
-                ReachedTarget?.Invoke(this);
-            }
-        }
-
-        return;
     }
 }
